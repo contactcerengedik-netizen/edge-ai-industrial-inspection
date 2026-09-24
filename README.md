@@ -2,14 +2,14 @@
 
 Fine-tuned YOLO11n to detect bottle-cap condition from a public dataset.
 
-Python · YOLO11 · Ultralytics · OpenCV · ONNX · Raspberry Pi 5
+Python · YOLO11 · Ultralytics · OpenCV · ONNX · Raspberry Pi 5 · MQTT · Docker
 
 **Precision 82.6% · Recall 82.9% · mAP50 81.6%**
 
 | Device | Latency | FPS |
 |---|---|---|
 | Tesla T4 | 13.8 ms | — |
-| Raspberry Pi 5 (ONNX, CPU) | 136.9 ms | 7.3 |
+| Raspberry Pi 5 (ONNX, CPU) | ~137–150 ms | ~6.7–7.3 |
 
 <img src="results/predictions/104_jpg.rf.7e2601bec1f456567de13bbfd1c1b505.jpg" width="240">
 <img src="results/predictions/107_jpg.rf.ce2c6f0af1626e183e9c3b6e39abf13f.jpg" width="240">
@@ -17,7 +17,7 @@ Python · YOLO11 · Ultralytics · OpenCV · ONNX · Raspberry Pi 5
 
 ## Pipeline
 
-Image → YOLO11n → defect / good / loos-cap / no-cap / ring-missing
+Camera → YOLO11n (ONNX) → stable label → MQTT `inspection/result`
 
 ## Data
 
@@ -34,7 +34,24 @@ The images were not collected by me.
 
 ## Edge deployment
 
-Exported YOLO11n to ONNX and ran inference on Raspberry Pi 5 with onnxruntime.
-Benchmark: 50 runs after 5 warm-up passes, image size 640.
+- Exported YOLO11n to ONNX; ran inference on Raspberry Pi 5 with onnxruntime
+- Live camera path uses Picamera2 + IMX500 AI Camera
+- Temporal stability filter (`STABLE_N=3`) before publishing labels
+- MQTT publish on topic `inspection/result`
+- Mosquitto broker via Docker Compose
 
-Script: [`inference/benchmark_onnx.py`](inference/benchmark_onnx.py)
+Scripts:
+- [`inference/benchmark_onnx.py`](inference/benchmark_onnx.py)
+- [`inference/live_onnx.py`](inference/live_onnx.py)
+- [`docker-compose.yml`](docker-compose.yml)
+
+```bash
+# broker
+sudo systemctl stop mosquitto   # if apt mosquitto is running
+docker compose up -d
+mosquitto_sub -h localhost -t inspection/result -v
+
+# live camera (host; needs Picamera2)
+source .venv/bin/activate
+python inference/live_onnx.py
+```

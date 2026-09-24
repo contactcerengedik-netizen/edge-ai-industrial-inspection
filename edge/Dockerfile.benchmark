@@ -1,0 +1,11 @@
+# Lightweight image for offline ONNX checks (no camera).
+FROM python:3.13-slim-bookworm
+
+WORKDIR /app
+RUN pip install --no-cache-dir onnxruntime opencv-python-headless numpy
+
+COPY inference/benchmark_onnx.py /app/inference/benchmark_onnx.py
+COPY models/bottle-cap-yolo11n.onnx /app/models/bottle-cap-yolo11n.onnx
+
+# Expect test.jpg mounted at /app/test.jpg
+CMD ["python", "inference/benchmark_onnx.py"]
