@@ -1,15 +1,18 @@
 # Bottle Cap Defect Detection
 
-Fine-tuned YOLO11n to detect bottle-cap condition from a public dataset.
+Real-time edge AI inspection: train YOLO11n, export ONNX, run on Raspberry Pi 5 + IMX500 camera, stabilize labels, publish over MQTT.
 
 Python · YOLO11 · Ultralytics · OpenCV · ONNX · Raspberry Pi 5 · MQTT · Docker
 
-**Precision 82.6% · Recall 82.9% · mAP50 81.6%**
+## Results
 
-| Device | Latency | FPS |
-|---|---|---|
-| Tesla T4 | 13.8 ms | — |
-| Raspberry Pi 5 (ONNX, CPU) | ~137–150 ms | ~6.7–7.3 |
+| Metric | Value |
+|---|---|
+| Precision | 82.6% |
+| Recall | 82.9% |
+| mAP50 | 81.6% |
+| Tesla T4 inference | 13.8 ms |
+| Raspberry Pi 5 (ONNX, CPU) | ~137–150 ms · ~6.7–7.3 FPS |
 
 <img src="results/predictions/104_jpg.rf.7e2601bec1f456567de13bbfd1c1b505.jpg" width="240">
 <img src="results/predictions/107_jpg.rf.ce2c6f0af1626e183e9c3b6e39abf13f.jpg" width="240">
