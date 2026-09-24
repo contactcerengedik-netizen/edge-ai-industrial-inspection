@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+import json
 import time
 from pathlib import Path
 
 import cv2
 import numpy as np
 import onnxruntime as ort
+import paho.mqtt.client as mqtt
 from picamera2 import Picamera2
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +17,8 @@ SIZE = 640
 CONF = 0.4
 IOU = 0.45
 STABLE_N = 3
+MQTT_HOST = "localhost"
+MQTT_TOPIC = "inspection/result"
 
 
 def letterbox(im, new_shape=640, color=(114, 114, 114)):
@@ -80,6 +84,10 @@ def main():
     session = ort.InferenceSession(str(MODEL), providers=["CPUExecutionProvider"])
     inp_name = session.get_inputs()[0].name
 
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.connect(MQTT_HOST, 1883, 60)
+    client.loop_start()
+
     picam2 = Picamera2()
     config = picam2.create_preview_configuration(
         main={"size": (640, 480), "format": "RGB888"}
@@ -88,11 +96,12 @@ def main():
     picam2.start()
     time.sleep(0.5)
 
-    print("Canli inference basladi. Durdurmak icin Ctrl+C")
+    print("Canli inference + MQTT basladi. Durdurmak icin Ctrl+C")
     frame_id = 0
     pending_label = None
     pending_count = 0
     stable_label = "none"
+    last_published = None
 
     try:
         while True:
@@ -109,6 +118,7 @@ def main():
             labels = [f"{NAMES[c]} {s:.2f}" for _, s, c in dets] or ["none"]
 
             current = labels[0].split()[0] if dets else "none"
+            score = float(labels[0].split()[1]) if dets else 0.0
             if current == pending_label:
                 pending_count += 1
             else:
@@ -121,13 +131,24 @@ def main():
                 f"[{frame_id}] {ms:.0f} ms | {fps:.1f} FPS | raw={', '.join(labels)} | stable={stable_label}"
             )
 
+            if stable_label != last_published:
+                payload = {
+                    "label": stable_label,
+                    "score": score if current == stable_label else None,
+                    "latency_ms": round(ms, 1),
+                    "fps": round(fps, 1),
+                    "frame": frame_id,
+                }
+                client.publish(MQTT_TOPIC, json.dumps(payload), qos=0)
+                last_published = stable_label
+
             vis = im0.copy()
-            for box, score, cid in dets:
+            for box, det_score, cid in dets:
                 x1, y1, x2, y2 = box.astype(int)
                 cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(
                     vis,
-                    f"{NAMES[cid]} {score:.2f}",
+                    f"{NAMES[cid]} {det_score:.2f}",
                     (x1, max(20, y1 - 5)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6,
@@ -149,6 +170,8 @@ def main():
         print("\nDurdu. Son kare:", OUT)
     finally:
         picam2.stop()
+        client.loop_stop()
+        client.disconnect()
 
 
 if __name__ == "__main__":
