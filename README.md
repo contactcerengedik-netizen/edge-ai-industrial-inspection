@@ -4,6 +4,14 @@ Real-time edge AI inspection: train YOLO11n, export ONNX, run on Raspberry Pi 5 
 
 Python · YOLO11 · Ultralytics · OpenCV · ONNX · Raspberry Pi 5 · MQTT · Docker
 
+## Live demo
+
+Raspberry Pi 5 + IMX500 camera → ONNX inference → stable label → MQTT.
+
+| Hardware | Live detection | MQTT |
+|---|---|---|
+| <img src="docs/pi-setup.jpg" width="260"> | <img src="docs/live-defect.png" width="260"> | <img src="docs/mqtt-output.png" width="260"> |
+
 ## Results
 
 | Metric | Value |
